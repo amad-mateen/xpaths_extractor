@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Element ID & XPath Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(120deg, #f4f6fb 0%, #e0e7ff 100%);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            padding: 36px 32px 40px 32px;
+            overflow: hidden;
+            animation: fadeIn 0.8s cubic-bezier(.4,0,.2,1);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        form {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        input[type="text"] {
+            flex: 1 1 350px;
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: #f8fafc;
+            transition: box-shadow 0.2s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #2563eb33;
+        }
+        button {
+            background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 2px 8px #2563eb22;
+            transition: background 0.2s, transform 0.15s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #1d4ed8 60%, #38bdf8 100%);
+            transform: translateY(-2px) scale(1.03);
+        }
+        label {
+            color: #475569;
+            font-size: 0.97rem;
+            user-select: none;
+        }
+        .error {
+            color: #e53e3e;
+            margin-bottom: 16px;
+            text-align: center;
+            animation: shake 0.4s;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translateX(-2px); }
+            20%, 80% { transform: translateX(4px); }
+            30%, 50%, 70% { transform: translateX(-8px); }
+            40%, 60% { transform: translateX(8px); }
+        }
+        .results {
+            margin-top: 16px;
+            animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+        }
+        .results table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            background: #f8fafc;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px #2563eb11;
+            table-layout: fixed;
+            word-break: break-all;
+        }
+        th, td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 0.97rem;
+            max-width: 260px;
+            overflow-wrap: break-word;
+        }
+        th {
+            background: #e0e7ff;
+            color: #374151;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .results tbody tr {
+            transition: background 0.2s;
+        }
+        .results tbody tr:hover {
+            background: #dbeafe;
+        }
+        .no-results {
+            text-align: center;
+            color: #64748b;
+            margin-top: 16px;
+            animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 18px 4vw 24px 4vw;
+                max-width: 99vw;
+            }
+            th, td {
+                font-size: 0.92rem;
+                max-width: 120px;
+            }
+        }
+        .column-toggles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+        .column-toggles label {
+            font-size: 0.97rem;
+            color: #475569;
+            user-select: none;
+        }
+        .row-toggle {
+            margin-bottom: 16px;
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            justify-content: center;
+        }
+        .row-toggle label {
+            font-size: 0.97rem;
+            color: #475569;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web Element ID & XPath Extractor</h1>
+        <form method="POST" id="extract-form">
+            <input type="text" name="url" placeholder="Enter a webpage URL..." value="{{ url or '' }}" required>
+            <input type="hidden" name="mode" id="mode-input" value="{{ mode or 'dynamic' }}">
+            <div class="mode-toggle-wrap">
+                <button type="button" id="mode-toggle" class="mode-toggle">
+                    <span class="mode-slider"></span>
+                    <span class="mode-label mode-static">Static</span>
+                    <span class="mode-label mode-dynamic">Dynamic</span>
+                </button>
+            </div>
+            <button type="submit">Extract</button>
+            <label style="display:flex;align-items:center;gap:4px;margin-left:10px;font-size:0.97rem;">
+                <input type="checkbox" name="skip_ssl" {% if skip_ssl %}checked{% endif %}>
+                Skip SSL Verification
+            </label>
+        </form>
+        <style>
+        .mode-toggle-wrap {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        .mode-toggle {
+            position: relative;
+            width: 70px;
+            height: 26px;
+            background: #e0e7ff;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            outline: none;
+            margin-right: 10px;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 4px;
+        }
+        .mode-toggle .mode-slider {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            width: 28px;
+            height: 20px;
+            background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #2563eb22;
+            transition: left 0.3s, background 0.3s;
+            z-index: 1;
+        }
+        .mode-toggle.static .mode-slider {
+            left: 3px;
+            background: linear-gradient(90deg, #64748b 60%, #a5b4fc 100%);
+        }
+        .mode-toggle.dynamic .mode-slider {
+            left: 39px;
+            background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
+        }
+        .mode-label {
+            position: relative;
+            z-index: 2;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            opacity: 0.7;
+            transition: color 0.3s, opacity 0.3s;
+            user-select: none;
+        }
+        .mode-toggle.static .mode-label.mode-static {
+            color: #2563eb;
+            opacity: 1;
+        }
+        .mode-toggle.dynamic .mode-label.mode-dynamic {
+            color: #2563eb;
+            opacity: 1;
+        }
+        </style>
+        <script>
+        // Mode toggle button logic
+        const modeToggle = document.getElementById('mode-toggle');
+        const modeInput = document.getElementById('mode-input');
+        function setMode(mode) {
+            if (mode === 'static') {
+                modeToggle.classList.add('static');
+                modeToggle.classList.remove('dynamic');
+                modeInput.value = 'static';
+            } else {
+                modeToggle.classList.add('dynamic');
+                modeToggle.classList.remove('static');
+                modeInput.value = 'dynamic';
+            }
+        }
+        // Initial mode from backend
+        setMode("{{ mode or 'dynamic' }}");
+        modeToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            setMode(modeInput.value === 'dynamic' ? 'static' : 'dynamic');
+        });
+        </script>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        {% if results %}
+            <div class="row-toggle">
+                <label><input type="checkbox" id="hide-empty-rows"> Hide rows with no unique identifiers</label>
+                <label><input type="checkbox" id="show-only-class" checked> Show only rows with class name</label>
+                <label><input type="checkbox" id="show-only-id"> Show only rows with element id</label>
+            </div>
+            <div class="column-toggles">
+                <label><input type="checkbox" class="col-toggle" data-col="id" checked> Element ID</label>
+                <label><input type="checkbox" class="col-toggle" data-col="class" checked> Class Name(s)</label>
+                <label><input type="checkbox" class="col-toggle" data-col="tag" checked> Tag Name</label>
+                <label><input type="checkbox" class="col-toggle" data-col="name" checked> Name</label>
+                <label><input type="checkbox" class="col-toggle" data-col="style" checked> Style</label>
+                <label><input type="checkbox" class="col-toggle" data-col="title" checked> Title</label>
+                <label><input type="checkbox" class="col-toggle" data-col="display_value" checked> Value/Text</label>
+                <label><input type="checkbox" class="col-toggle" data-col="element_type" checked> Element Type</label>
+                <label><input type="checkbox" class="col-toggle" data-col="aria_attrs"> ARIA Attributes</label>
+                <label><input type="checkbox" class="col-toggle" data-col="data_attrs"> Data Attributes</label>
+                <label><input type="checkbox" class="col-toggle" data-col="css_selector"> CSS Selector</label>
+                <label><input type="checkbox" class="col-toggle" data-col="attr_selector"> Attribute Selector</label>
+                <label><input type="checkbox" class="col-toggle" data-col="attr_string"> All Attributes</label>
+                <label><input type="checkbox" class="col-toggle" data-col="xpath" checked> XPath</label>
+            </div>
+            <div class="results">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th class="col-id">Element ID</th>
+                            <th class="col-class">Class Name(s)</th>
+                            <th class="col-tag">Tag Name</th>
+                            <th class="col-name">Name</th>
+                            <th class="col-style">Style</th>
+                            <th class="col-title">Title</th>
+                            <th class="col-display_value">Value/Text</th>
+                            <th class="col-element_type">Element Type</th>
+                            <th class="col-css_selector">CSS Selector</th>
+                            <th class="col-attr_selector">Attribute Selector</th>
+                            <th class="col-attr_string">All Attributes</th>
+                            <th class="col-aria_attrs">ARIA Attributes</th>
+                            <th class="col-data_attrs">Data Attributes</th>
+                            <th class="col-xpath">XPath</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in results %}
+                        <tr class="data-row"
+                            data-id="{{ item.id or '' }}"
+                            data-class="{{ item.class or '' }}"
+                            data-attr_selector="{{ item.attr_selector or '' }}">
+                            <td>{{ loop.index }}</td>
+                            <td class="col-id">{{ item.id or '-' }}</td>
+                            <td class="col-class">{{ item.class or '-' }}</td>
+                            <td class="col-tag">{{ item.tag or '-' }}</td>
+                            <td class="col-name">{{ item.name or '-' }}</td>
+                            <td class="col-style">{{ item.style or '-' }}</td>
+                            <td class="col-title">{{ item.title or '-' }}</td>
+                            <td class="col-display_value">
+                                {% set val = item.display_value or '-' %}
+                                {% if val|length > 120 %}
+                                    <span class="truncated-value" title="Click to expand/collapse">{{ val[:80] }}... <span class="expand-hint">[more]</span></span>
+                                    <span class="full-value" style="display:none;">{{ val }}</span>
+                                {% else %}
+                                    {{ val }}
+                                {% endif %}
+                            </td>
+        <style>
+        .truncated-value {
+            cursor: pointer;
+            color: #2563eb;
+            white-space: pre-wrap;
+        }
+        .expand-hint {
+            color: #64748b;
+            font-size: 0.95em;
+        }
+        .full-value {
+            white-space: pre-wrap;
+        }
+        </style>
+        <script>
+        // Expand/collapse long value/text
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.truncated-value').forEach(function(span) {
+                span.addEventListener('click', function() {
+                    var td = span.parentElement;
+                    var full = td.querySelector('.full-value');
+                    if (full.style.display === 'none') {
+                        span.style.display = 'none';
+                        full.style.display = '';
+                    } else {
+                        span.style.display = '';
+                        full.style.display = 'none';
+                    }
+                });
+            });
+            document.querySelectorAll('.full-value').forEach(function(span) {
+                span.addEventListener('click', function() {
+                    var td = span.parentElement;
+                    var trunc = td.querySelector('.truncated-value');
+                    span.style.display = 'none';
+                    trunc.style.display = '';
+                });
+            });
+        });
+        </script>
+                            <td class="col-element_type">{{ item.element_type or '-' }}</td>
+                            <td class="col-css_selector" style="font-family:monospace;">{{ item.css_selector or '-' }}</td>
+                            <td class="col-attr_selector">{{ item.attr_selector or '-' }}</td>
+                            <td class="col-attr_string">{{ item.attr_string or '-' }}</td>
+                            <td class="col-aria_attrs">{% if item.aria_attrs %}{% for k, v in item.aria_attrs.items() %}{{ k }}="{{ v }}" {% endfor %}{% else %}-{% endif %}</td>
+                            <td class="col-data_attrs">{% if item.data_attrs %}{% for k, v in item.data_attrs.items() %}{{ k }}="{{ v }}" {% endfor %}{% else %}-{% endif %}</td>
+                            <td class="col-xpath" style="font-family:monospace;">{{ item.xpath }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <script>
+                // Column toggle logic
+                document.querySelectorAll('.col-toggle').forEach(function(checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        var col = this.getAttribute('data-col');
+                        var show = this.checked;
+                        var ths = document.querySelectorAll('th.col-' + col);
+                        var tds = document.querySelectorAll('td.col-' + col);
+                        ths.forEach(function(th) { th.style.display = show ? '' : 'none'; });
+                        tds.forEach(function(td) { td.style.display = show ? '' : 'none'; });
+                    });
+                });
+                // Hide advanced columns by default
+                ['css_selector','attr_selector','attr_string','aria_attrs','data_attrs'].forEach(function(col) {
+                    var ths = document.querySelectorAll('th.col-' + col);
+                    var tds = document.querySelectorAll('td.col-' + col);
+                    ths.forEach(function(th) { th.style.display = 'none'; });
+                    tds.forEach(function(td) { td.style.display = 'none'; });
+                    var toggle = document.querySelector('.col-toggle[data-col="' + col + '"]');
+                    if (toggle) toggle.checked = false;
+                });
+                // Show only rows with class name by default
+                document.getElementById('show-only-class').checked = true;
+                // Initial row visibility
+                updateRowVisibility();
+                // Row toggle logic
+                function updateRowVisibility() {
+                    var hideEmpty = document.getElementById('hide-empty-rows').checked;
+                    var onlyClass = document.getElementById('show-only-class').checked;
+                    var onlyId = document.getElementById('show-only-id').checked;
+                    document.querySelectorAll('tr.data-row').forEach(function(row) {
+                        var id = row.getAttribute('data-id').trim();
+                        var cls = row.getAttribute('data-class').trim();
+                        // Hide if all unique identifiers are empty (id and class)
+                        if (hideEmpty && !id && !cls) {
+                            row.style.display = 'none';
+                            return;
+                        }
+                        // Show only rows with class name and/or id
+                        if (onlyClass && onlyId) {
+                            if (!id && !cls) {
+                                row.style.display = 'none';
+                                return;
+                            }
+                        } else if (onlyClass) {
+                            if (!cls) {
+                                row.style.display = 'none';
+                                return;
+                            }
+                        } else if (onlyId) {
+                            if (!id) {
+                                row.style.display = 'none';
+                                return;
+                            }
+                        }
+                        // Otherwise, show
+                        row.style.display = '';
+                    });
+                }
+                document.getElementById('hide-empty-rows').addEventListener('change', updateRowVisibility);
+                document.getElementById('show-only-class').addEventListener('change', updateRowVisibility);
+                document.getElementById('show-only-id').addEventListener('change', updateRowVisibility);
+            </script>
+        {% elif url %}
+            <div class="no-results">No elements found or could not extract elements.</div>
+        {% endif %}
+    </div>
+</body>
+</html>
